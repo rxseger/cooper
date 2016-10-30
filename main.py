@@ -41,6 +41,8 @@ def save_config():
         print("Couldn't save /config.json")
 
 def main():
+    load_config()
+    setup_pins()
     client = MQTTClient(CONFIG['client_id'], CONFIG['broker'])
     client.connect()
     print("Connected to {}".format(CONFIG['broker']))
@@ -53,6 +55,4 @@ def main():
         time.sleep(5)
 
 if __name__ == '__main__':
-    load_config()
-    setup_pins()
     main()
