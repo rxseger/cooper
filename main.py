@@ -8,17 +8,11 @@ from umqtt.simple import MQTTClient
 # These defaults are overwritten with the contents of /config.json by load_config()
 CONFIG = {
     "broker": "192.168.1.19",
-    "sensor_pin": 0, 
     "client_id": b"esp8266_" + ubinascii.hexlify(machine.unique_id()),
     "topic": b"home",
 }
 
 client = None
-sensor_pin = None
-
-def setup_pins():
-    global sensor_pin
-    sensor_pin = machine.ADC(CONFIG['sensor_pin'])
 
 def load_config():
     import ujson as json
@@ -42,12 +36,12 @@ def save_config():
 
 def main():
     load_config()
-    setup_pins()
+    analog_pin = machine.ADC(0) # pin A0 on ESP8266
     client = MQTTClient(CONFIG['client_id'], CONFIG['broker'])
     client.connect()
     print("Connected to {}".format(CONFIG['broker']))
     while True:
-        data = sensor_pin.read()
+        data = analog_pin.read()
         client.publish('{}/{}'.format(CONFIG['topic'],
                                           CONFIG['client_id']),
                                           bytes(str(data), 'utf-8'))
