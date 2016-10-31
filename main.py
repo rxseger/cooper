@@ -1,5 +1,6 @@
 import machine
 import time
+import socket
 import micropython
 
 micropython.alloc_emergency_exception_buf(100)
@@ -31,7 +32,7 @@ CONFIG = {
         },
     ],
     "interval": 0.01, # 10 ms
-    "adc_count_interval": 500, # every N*interval, poll the ADC
+    "adc_count_interval": 5000, # every N*interval, poll the ADC
 }
 
 client = None
@@ -79,6 +80,14 @@ def main():
 
         add_handler(pin_number, name, info['trigger'])
 
+    # serve
+    addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+    s = socket.socket()
+    s.settimeout(CONFIG['interval']) # seconds to wait
+    s.bind(addr)
+    s.listen(1)
+    print('Web server listening on',addr)
+
     # poll
     i = 0
     while True:
@@ -106,7 +115,42 @@ def main():
                 # Save old value for next time
                 name2old_value[name] = value
 
-        time.sleep(CONFIG['interval']) # TODO: configurable interval
+        try:
+            cl, addr = s.accept()
+        except:
+            pass
+        else:
+            print('Accepted connection:',cl,addr)
+            cl.settimeout(1) # larger timeout than accept() timeout
+            cl_file = cl.makefile('rwb', 0)
+            try:
+                while True:
+                    line = cl_file.readline()
+                    if not line or line == b'\r\n':
+                        break
+            except:
+                pass
+            html = """
+<html>
+<head>
+<title>esp8266_bedroom</title>
+</head>
+<body>
+<h1>esp8266_bedroom</h1>
+</body>
+</html>"""
+
+            response = """HTTP/1.1 200 OK\r
+Content-Type: text/html\r
+Content-Length: {}\r
+\r
+{}
+""".format(len(html), html)
+
+            cl.send(response)
+            cl.close()
+
+        #time.sleep(CONFIG['interval'])
 
 # TODO: re-enable
 #if __name__ == '__main__':
