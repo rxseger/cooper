@@ -1,17 +1,14 @@
 import machine
 import time
-import ubinascii
-import webrepl
 import micropython
 
 micropython.alloc_emergency_exception_buf(100)
 
 #from umqtt.simple import MQTTClient
 
-# These defaults are overwritten with the contents of /config.json by load_config()
 CONFIG = {
-    "broker": "192.168.1.19",
-    "client_id": b"esp8266_" + ubinascii.hexlify(machine.unique_id()),
+    "broker": "192.168.1.19", # overwritten by contents of file "/broker.ip"
+    "client_id": b"esp8266_bedroom",
     "topic": b"home",
     "switches": [
         {
@@ -40,24 +37,13 @@ CONFIG = {
 client = None
 
 def load_config():
-    import ujson as json
     try:
-        with open("/config.json") as f:
-            config = json.loads(f.read())
+        with open("/broker.ip") as f:
+            # All configuration is specified above except this one field can be overridden
+            CONFIG['broker'] = f.read().strip()
     except (OSError, ValueError):
-        print("Couldn't load /config.json")
-        save_config()
-    else:
-        CONFIG.update(config)
-        print("Loaded config from /config.json")
-
-def save_config():
-    import ujson as json
-    try:
-        with open("/config.json", "w") as f:
-            f.write(json.dumps(CONFIG))
-    except OSError:
-        print("Couldn't save /config.json")
+        print("Couldn't load /broker.ip, assuming default broker {}".format(CONFIG['broker']))
+    print("Loaded config from /broker.ip")
 
 global any_gpio_changed
 any_gpio_changed = False
