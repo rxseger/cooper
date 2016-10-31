@@ -2,6 +2,7 @@ import machine
 import time
 import socket
 import micropython
+import ure as re
 
 micropython.alloc_emergency_exception_buf(100)
 
@@ -43,7 +44,14 @@ CONFIG = {
             "name": "Internal Green LED",
             "on_path": "/led/on",
             "off_path": "/led/off",
-        }
+        },
+        {
+            "pin": 15,
+            "name": "Buzzer",
+            "on_path": "/buzzer/on",
+            "off_path": "/buzzer/off",
+            "pwm": True,
+        },
     ],
     "interval": 0.01, # 10 ms
     "adc_count_interval": 5000, # every N*interval, poll the ADC
@@ -66,26 +74,56 @@ def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
     cl.settimeout(1) # larger timeout than accept() timeout
     cl_file = cl.makefile('rwb', 0)
     try:
+        request_line = ""
         while True:
             line = cl_file.readline()
             #print('Request line: {}'.format(line))
             if not line or line == b'\r\n':
                 break
-            for info in CONFIG['output_gpio']:
-                new_value = None
-                # hack: check for matching URL strings anywhere in request data TODO: properly parse
-                if info['on_path'] in line:
-                    new_value = True
-                if info['off_path'] in line:
-                    new_value = False
+            # hack: check for matching URL strings anywhere in what looks like the HTTP request line TODO: properly parse
+            # also, allowing any of these verbs for convenience, though technically should PUT only change state? TODO restfulness
+            if line.startswith('GET ') or line.startswith('POST ') or line.startswith('PUT '):
+                request_line = line
 
-                if new_value is not None:
-                    print('Request via {} to change value of GPIO output: {} ({}) -> {}'.format(line, info['name'], info['pin'], new_value))
+        for info in CONFIG['output_gpio']:
+            new_value = None
+            if info['on_path'] in request_line:
+                new_value = True
+            if info['off_path'] in request_line:
+                new_value = False
+
+            if new_value is not None:
+                print('Request via {} to change value of GPIO output: {} ({}) -> {}'.format(line, info['name'], info['pin'], new_value))
+                if info.get('pwm'):
+                    # pulse-width modulation
+                    if 'object' not in info:
+                        obj = machine.PWM(machine.Pin(info['pin']))
+                        info['object'] = obj # cached to avoid recreating objects
+                    obj = info['object']
+                    if new_value is False:
+                        obj.duty(0)
+                        # TODO: could deinit(), but this works alright
+                    else:
+                        # on, but at what frequency / duty cycle?
+                        match = re.search(r'freq=(\d+)&duty=(\d+)', request_line)
+                        if match:
+                            freq = int(match.group(1))
+                            duty = int(match.group(2))
+                        else:
+                            freq = 10
+                            duty = 512
+                        obj.freq(freq)
+                        obj.duty(duty)
+ 
+                else:
+                    # regular GPIO on/off
                     if 'object' not in info:
                         obj = machine.Pin(info['pin'], machine.Pin.OUT)
                         info['object'] = obj # cached to avoid recreating objects
                     obj = info['object']
                     obj.value(new_value)
+
+                # TODO: redirect back to homepage
 
 
     except Exception as e:
