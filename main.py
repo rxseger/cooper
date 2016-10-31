@@ -73,7 +73,8 @@ def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
  </tr>
 """.format(title, title, analog_value)
 
-    for name, value in name2value.items():
+    for name in sorted(name2value.keys()):
+        value = name2value[name]
         html += """
  <tr>
   <td>{}</td>
