@@ -71,12 +71,14 @@ def main():
     # interrupt-driven switches
     print('Switches:',CONFIG['switches'])
     name2pin = {}
+    name2old_value = {}
     for info in CONFIG['switches']:
         pin_number = info['pin']
         name = info['name']
 
         pin = machine.Pin(pin_number, machine.Pin.IN, info['pull_up_down'])
         name2pin[name] = pin
+        name2old_value[name] = 1 # active-low; assume starts off inactive
 
         def add_handler(pin_number, name, trigger):
             def handler(ignored): # ISR argument is a Pin object, which can't convert back to a pin number?! Ignore it and use closure
@@ -105,8 +107,13 @@ def main():
 
             # Get new values of all pins
             for name, pin in name2pin.items():
+                old_value = name2old_value[name]
                 value = pin.value()
-                print('GPIO pin: {} -> {}'.format(name, value))
+                if old_value != value:
+                    print('GPIO pin {}: {} -> {}'.format(name, old_value, value))
+
+                # Save old value for next time
+                name2old_value[name] = value
 
         time.sleep(1) # TODO: configurable interval
 
