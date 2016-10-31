@@ -57,12 +57,11 @@ def save_config():
     except OSError:
         print("Couldn't save /config.json")
 
-global gpio_changed, any_gpio_changed
-gpio_changed = bytearray(16) # sixteen bytes (position=pin #), 0=not changed, 1=changed
+global any_gpio_changed
 any_gpio_changed = False
 
 def main():
-    global gpio_changed, any_gpio_changed
+    global any_gpio_changed
     load_config()
     analog_pin = machine.ADC(0) # pin A0 on ESP8266
     #client = MQTTClient(CONFIG['client_id'], CONFIG['broker']) # TODO: what could cause "ImportError: cannot import name MQTTClient"?
@@ -72,20 +71,17 @@ def main():
     # interrupt-driven switches
     print('Switches:',CONFIG['switches'])
     name2pin = {}
-    pin_number2name = {}
     for info in CONFIG['switches']:
         pin_number = info['pin']
         name = info['name']
 
         pin = machine.Pin(pin_number, machine.Pin.IN, info['pull_up_down'])
         name2pin[name] = pin
-        pin_number2name[pin_number] = name
 
         def add_handler(pin_number, name, trigger):
             def handler(ignored): # ISR argument is a Pin object, which can't convert back to a pin number?! Ignore it and use closure
                 print('pin change {}',pin_number)
-                global gpio_changed, any_gpio_changed
-                gpio_changed[pin_number] = 1 # flag this pin as having changed
+                global any_gpio_changed
                 any_gpio_changed = True
                 # important: can't do much in an ISR, see https://micropython.org/resources/docs/en/latest/wipy/reference/isr_rules.html
                 #print('read {}: {}'.format(pin,pin.value()))
@@ -104,27 +100,13 @@ def main():
         print('Sensor state: {}'.format(data))
 
         if any_gpio_changed:
-            print('Saw some GPIO change:',gpio_changed)
-            # Critical section: accumulate list of changed GPIO pins
-            list_gpio_changed = []
-            #pyb.disable_irq() # note: not pyb as in https://micropython.org/resources/docs/en/latest/wipy/reference/isr_rules.html - see https://github.com/micropython/micropython/issues/2085
-            #machine.disable_irq() # TODO: why does this seem to hang the program over the console, even though I re-enable interrupts?
-            for pin, flag in enumerate(gpio_changed):
-                if flag:
-                    list_gpio_changed.append(pin)
+            print('Saw some GPIO changes')
             any_gpio_changed = False
-            gpio_changed = bytearray(16)
-            #machine.enable_irq()
 
-            # Get what it changed to
-            for pin_number in list_gpio_changed:
-                name = pin_number2name[pin_number]
-                pin = name2pin[name]
-
+            # Get new values of all pins
+            for name, pin in name2pin.items():
                 value = pin.value()
-            
-                print('GPIO pin changed: {} -> {}'.format(name, value))
-
+                print('GPIO pin: {} -> {}'.format(name, value))
 
         time.sleep(1) # TODO: configurable interval
 
