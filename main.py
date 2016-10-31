@@ -244,7 +244,12 @@ def main():
     # poll
     i = None
     analog_value = -1
+    #watchdog = machine.WDT(timeout=5000) # reboot if not fed within 5 seconds - TypeError: function doesn't take keyword arguments
+    #watchdog = machine.WDT(5000) # is this five seconds?
+    watchdog = machine.WDT() # is this five seconds?
     while True:
+        watchdog.feed()
+
         if i is None or i == CONFIG['adc_count_interval']:
             analog_value = analog_pin.read()
             #TODO
@@ -280,6 +285,5 @@ def main():
 
         #time.sleep(CONFIG['interval'])
 
-# TODO: re-enable
 #if __name__ == '__main__':
 #    main()
