@@ -47,7 +47,7 @@ def load_config():
     print("Loaded config from /broker.ip")
 
 
-def serve_web_client(cl, addr, CONFIG, analog_value):
+def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
     print('Accepted connection:',cl,addr)
     cl.settimeout(1) # larger timeout than accept() timeout
     cl_file = cl.makefile('rwb', 0)
@@ -66,10 +66,24 @@ def serve_web_client(cl, addr, CONFIG, analog_value):
 </head>
 <body>
 <h1>{}</h1>
-<p>Analog Sensor: {}
+<table>
+ <tr>
+  <td>Analog Sensor</td>
+  <td>{}</td>
+ </tr>
 """.format(title, title, analog_value)
 
-    html += """</body>
+    for name, value in name2value.items():
+        html += """
+ <tr>
+  <td>{}</td>
+  <td>{}</td>
+ </tr>""".format(name, value)
+ 
+
+    html += """
+</table>
+</body>
 </html>"""
 
     response = """HTTP/1.1 200 OK\r
@@ -159,7 +173,7 @@ def main():
         except:
             pass
         else:
-            serve_web_client(cl, addr, CONFIG, analog_value)
+            serve_web_client(cl, addr, CONFIG, analog_value, name2old_value)
 
         #time.sleep(CONFIG['interval'])
 
