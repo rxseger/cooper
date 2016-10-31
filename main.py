@@ -6,7 +6,7 @@ import micropython
 
 micropython.alloc_emergency_exception_buf(100)
 
-from umqtt.simple import MQTTClient
+#from umqtt.simple import MQTTClient
 
 # These defaults are overwritten with the contents of /config.json by load_config()
 CONFIG = {
@@ -65,9 +65,9 @@ def main():
     global gpio_changed, any_gpio_changed
     load_config()
     analog_pin = machine.ADC(0) # pin A0 on ESP8266
-    client = MQTTClient(CONFIG['client_id'], CONFIG['broker'])
-    client.connect()
-    print("Connected to {}".format(CONFIG['broker']))
+    #client = MQTTClient(CONFIG['client_id'], CONFIG['broker']) # TODO: what could cause "ImportError: cannot import name MQTTClient"?
+    #client.connect()
+    #print("Connected to {}".format(CONFIG['broker']))
 
     # interrupt-driven switches
     print('Switches:',CONFIG['switches'])
@@ -97,9 +97,10 @@ def main():
     # poll
     while True:
         data = analog_pin.read()
-        client.publish('{}/{}'.format(CONFIG['topic'],
-                                          CONFIG['client_id']),
-                                          bytes(str(data), 'utf-8'))
+        #TODO
+        #client.publish('{}/{}'.format(CONFIG['topic'],
+        #                                  CONFIG['client_id']),
+        #                                  bytes(str(data), 'utf-8'))
         print('Sensor state: {}'.format(data))
 
         if any_gpio_changed:
