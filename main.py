@@ -46,6 +46,43 @@ def load_config():
         print("Couldn't load /broker.ip, assuming default broker {}".format(CONFIG['broker']))
     print("Loaded config from /broker.ip")
 
+
+def serve_web_client(cl, addr, CONFIG, analog_value):
+    print('Accepted connection:',cl,addr)
+    cl.settimeout(1) # larger timeout than accept() timeout
+    cl_file = cl.makefile('rwb', 0)
+    try:
+        while True:
+            line = cl_file.readline()
+            if not line or line == b'\r\n':
+                break
+    except:
+        pass
+
+    title = CONFIG['client_id'].decode('ascii')
+    html = """<html>
+<head>
+<title>{}</title>
+</head>
+<body>
+<h1>{}</h1>
+<p>Analog Sensor: {}
+""".format(title, title, analog_value)
+
+    html += """</body>
+</html>"""
+
+    response = """HTTP/1.1 200 OK\r
+Content-Type: text/html\r
+Content-Length: {}\r
+\r
+{}
+""".format(len(html), html)
+
+    cl.send(response)
+    cl.close()
+
+
 global any_gpio_changed
 any_gpio_changed = False
 
@@ -89,17 +126,19 @@ def main():
     print('Web server listening on',addr)
 
     # poll
-    i = 0
+    i = None
+    analog_value = -1
     while True:
-        i += 1
-        if i == CONFIG['adc_count_interval']:
-            data = analog_pin.read()
+        if i is None or i == CONFIG['adc_count_interval']:
+            analog_value = analog_pin.read()
             #TODO
             #client.publish('{}/{}'.format(CONFIG['topic'],
             #                                  CONFIG['client_id']),
-            #                                  bytes(str(data), 'utf-8'))
-            print('Sensor state: {}'.format(data))
+            #                                  bytes(str(analog_value), 'utf-8'))
+            print('Sensor state: {}'.format(analog_value))
             i = 0
+
+        i += 1
 
         if any_gpio_changed:
             print('Saw some GPIO changes')
@@ -120,35 +159,7 @@ def main():
         except:
             pass
         else:
-            print('Accepted connection:',cl,addr)
-            cl.settimeout(1) # larger timeout than accept() timeout
-            cl_file = cl.makefile('rwb', 0)
-            try:
-                while True:
-                    line = cl_file.readline()
-                    if not line or line == b'\r\n':
-                        break
-            except:
-                pass
-            html = """
-<html>
-<head>
-<title>esp8266_bedroom</title>
-</head>
-<body>
-<h1>esp8266_bedroom</h1>
-</body>
-</html>"""
-
-            response = """HTTP/1.1 200 OK\r
-Content-Type: text/html\r
-Content-Length: {}\r
-\r
-{}
-""".format(len(html), html)
-
-            cl.send(response)
-            cl.close()
+            serve_web_client(cl, addr, CONFIG, analog_value)
 
         #time.sleep(CONFIG['interval'])
 
