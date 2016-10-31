@@ -114,6 +114,13 @@ def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
   <td>{}</td>
  </tr>""".format(name, value)
  
+    for info in CONFIG['output_gpio']:
+        html += """
+ <tr>
+  <td>{}</td>
+  <td><a href="{}">On</a> | <a href="{}">Off</a></td>
+ </tr>
+""".format(info['name'], info['on_path'], info['off_path'])
 
     html += """
 </table>
