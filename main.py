@@ -84,7 +84,6 @@ def main():
 
         def add_handler(pin_number, name, trigger):
             def handler(ignored): # ISR argument is a Pin object, which can't convert back to a pin number?! Ignore it and use closure
-                print('pin change {}',pin_number)
                 global any_gpio_changed
                 any_gpio_changed = True
                 # important: can't do much in an ISR, see https://micropython.org/resources/docs/en/latest/wipy/reference/isr_rules.html
