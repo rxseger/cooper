@@ -285,5 +285,5 @@ def main():
 
         #time.sleep(CONFIG['interval'])
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
