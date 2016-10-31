@@ -11,7 +11,7 @@ CONFIG = {
     "broker": "192.168.1.19", # overwritten by contents of file "/broker.ip"
     "client_id": b"esp8266_bedroom",
     "topic": b"home",
-    "switches": [
+    "input_gpio": [
         {
             "pin": 4,
             "name": "Switch #2",
@@ -30,6 +30,20 @@ CONFIG = {
             "pull_up_down": machine.Pin.PULL_UP,
             "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
         },
+    ],
+    "output_gpio": [
+        {
+            "pin": 14,
+            "name": "AC Outlet",
+            "on_path": "/outlet/on",
+            "off_path": "/outlet/off",
+        },
+        {
+            "pin": 16,
+            "name": "Internal Green LED",
+            "on_path": "/led/on",
+            "off_path": "/led/off",
+        }
     ],
     "interval": 0.01, # 10 ms
     "adc_count_interval": 5000, # every N*interval, poll the ADC
@@ -54,9 +68,28 @@ def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
     try:
         while True:
             line = cl_file.readline()
+            #print('Request line: {}'.format(line))
             if not line or line == b'\r\n':
                 break
-    except:
+            for info in CONFIG['output_gpio']:
+                new_value = None
+                # hack: check for matching URL strings anywhere in request data TODO: properly parse
+                if info['on_path'] in line:
+                    new_value = True
+                if info['off_path'] in line:
+                    new_value = False
+
+                if new_value is not None:
+                    print('Request via {} to change value of GPIO output: {} ({}) -> {}'.format(line, info['name'], info['pin'], new_value))
+                    if 'object' not in info:
+                        obj = machine.Pin(info['pin'], machine.Pin.OUT)
+                        info['object'] = obj # cached to avoid recreating objects
+                    obj = info['object']
+                    obj.value(new_value)
+
+
+    except Exception as e:
+        print('Exception from client:',e)
         pass
 
     title = CONFIG['client_id'].decode('ascii')
@@ -110,10 +143,10 @@ def main():
     #print("Connected to {}".format(CONFIG['broker']))
 
     # interrupt-driven switches
-    print('Switches:',CONFIG['switches'])
+    print('Switches:',CONFIG['input_gpio'])
     name2pin = {}
     name2old_value = {}
-    for info in CONFIG['switches']:
+    for info in CONFIG['input_gpio']:
         pin_number = info['pin']
         name = info['name']
 
