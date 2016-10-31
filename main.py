@@ -33,6 +33,8 @@ CONFIG = {
             "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
         },
     ],
+    "interval": 0.01, # 10 ms
+    "adc_count_interval": 500, # every N*interval, poll the ADC
 }
 
 client = None
@@ -93,13 +95,17 @@ def main():
         add_handler(pin_number, name, info['trigger'])
 
     # poll
+    i = 0
     while True:
-        data = analog_pin.read()
-        #TODO
-        #client.publish('{}/{}'.format(CONFIG['topic'],
-        #                                  CONFIG['client_id']),
-        #                                  bytes(str(data), 'utf-8'))
-        print('Sensor state: {}'.format(data))
+        i += 1
+        if i == CONFIG['adc_count_interval']:
+            data = analog_pin.read()
+            #TODO
+            #client.publish('{}/{}'.format(CONFIG['topic'],
+            #                                  CONFIG['client_id']),
+            #                                  bytes(str(data), 'utf-8'))
+            print('Sensor state: {}'.format(data))
+            i = 0
 
         if any_gpio_changed:
             print('Saw some GPIO changes')
@@ -115,7 +121,7 @@ def main():
                 # Save old value for next time
                 name2old_value[name] = value
 
-        time.sleep(1) # TODO: configurable interval
+        time.sleep(CONFIG['interval']) # TODO: configurable interval
 
 # TODO: re-enable
 #if __name__ == '__main__':
