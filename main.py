@@ -10,6 +10,7 @@ micropython.alloc_emergency_exception_buf(100)
 
 CONFIG = {
     "broker": "192.168.1.19", # overwritten by contents of file "/broker.ip"
+    "udp_port": 8266, # of IP address above, for UDP datagrams on input GPIO transitions
     "client_id": b"esp8266_bedroom",
     "topic": b"home",
     "input_gpio": [
@@ -18,18 +19,24 @@ CONFIG = {
             "name": "Switch #2",
             "pull_up_down": machine.Pin.PULL_UP,
             "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
+            "on_bytes":  b'21',
+            "off_bytes": b'20',
         },
         {
             "pin": 2,
             "name": "Switch #3",
             "pull_up_down": machine.Pin.PULL_UP,
             "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
+            "on_bytes":  b'31',
+            "off_bytes": b'30',
         },
         {
             "pin": 5,
             "name": "Switch #4",
             "pull_up_down": machine.Pin.PULL_UP,
             "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
+            "on_bytes":  b'41',
+            "off_bytes": b'40',
         },
     ],
     "output_gpio": [
@@ -175,6 +182,20 @@ Content-Length: {}\r
     cl.send(response)
     cl.close()
 
+def notify(CONFIG, name2config, name, value):
+    info = name2config[name]
+   
+    if not value:
+        data = info['on_bytes'] # active-low!
+    else:
+        data = info['off_bytes']
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    address = (CONFIG['broker'], CONFIG['udp_port'])
+    s.sendto(data, address)
+    print('Sent datagram to {}: {}'.format(address, data))
+    # connectionless
+
 
 global any_gpio_changed
 any_gpio_changed = False
@@ -191,6 +212,7 @@ def main():
     print('Switches:',CONFIG['input_gpio'])
     name2pin = {}
     name2old_value = {}
+    name2config = {}
     for info in CONFIG['input_gpio']:
         pin_number = info['pin']
         name = info['name']
@@ -198,6 +220,7 @@ def main():
         pin = machine.Pin(pin_number, machine.Pin.IN, info['pull_up_down'])
         name2pin[name] = pin
         name2old_value[name] = 1 # active-low; assume starts off inactive
+        name2config[name] = info
 
         def add_handler(pin_number, name, trigger):
             def handler(ignored): # ISR argument is a Pin object, which can't convert back to a pin number?! Ignore it and use closure
@@ -243,6 +266,7 @@ def main():
                 value = pin.value()
                 if old_value != value:
                     print('GPIO pin {}: {} -> {}'.format(name, old_value, value))
+                    notify(CONFIG, name2config, name, value)
 
                 # Save old value for next time
                 name2old_value[name] = value
