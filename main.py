@@ -229,7 +229,7 @@ def main():
         name2old_value[name] = 1 # active-low; assume starts off inactive
         name2config[name] = info
 
-        def add_handler(pin_number, name, trigger):
+        def add_handler(pin_number, name):
             def handler(ignored): # ISR argument is a Pin object, which can't convert back to a pin number?! Ignore it and use closure
                 global any_gpio_changed
                 any_gpio_changed = True
@@ -238,7 +238,7 @@ def main():
             print('Watching pin {} = {}'.format(pin_number, name))
             pin.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=handler)
 
-        add_handler(pin_number, name, info['trigger'])
+        add_handler(pin_number, name)
 
     # serve
     addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
