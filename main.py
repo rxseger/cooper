@@ -62,7 +62,8 @@ CONFIG = {
         },
     ],
     "interval": 0.01, # 10 ms
-    "adc_count_interval": 5000, # every N*interval, poll the ADC
+    "adc_count_interval": 100, # every N*interval, poll the ADC
+    "adc_min_delta": 5, # only report changes if ADC differs by this amount from last poll interval
 }
 
 client = None
@@ -252,6 +253,7 @@ def main():
     # poll
     i = None
     analog_value = -1
+    old_analog_value = analog_value
     #watchdog = machine.WDT(timeout=5000) # reboot if not fed within 5 seconds - TypeError: function doesn't take keyword arguments
     #watchdog = machine.WDT(5000) # is this five seconds?
     watchdog = machine.WDT() # is this five seconds?
@@ -264,8 +266,12 @@ def main():
             #client.publish('{}/{}'.format(CONFIG['topic'],
             #                                  CONFIG['client_id']),
             #                                  bytes(str(analog_value), 'utf-8'))
-            print('Sensor state: {}'.format(analog_value))
+            delta = abs(analog_value - old_analog_value)
+            if delta >= CONFIG['adc_min_delta']:
+                print('Sensor state: {} -> {}'.format(old_analog_value, analog_value))
+
             i = 0
+            old_analog_value = analog_value
 
         i += 1
 
