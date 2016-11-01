@@ -182,7 +182,7 @@ Content-Length: {}\r
     cl.send(response)
     cl.close()
 
-def notify(CONFIG, name2config, name, value, udp_port):
+def notify_gpio(CONFIG, name2config, name, value):
     info = name2config[name]
    
     if not value:
@@ -191,16 +191,18 @@ def notify(CONFIG, name2config, name, value, udp_port):
         data = info['off_bytes']
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    address = (CONFIG['broker'], udp_port)
+    address = (CONFIG['broker'], CONFIG['udp_port_gpio'])
     s.sendto(data, address)
     print('Sent datagram to {}: {}'.format(address, data))
     # connectionless
 
-def notify_gpio(CONFIG, name2config, name, value):
-    return notify(CONFIG, name2config, name, value, CONFIG['udp_port_gpio'])
-
-def notify_adc(CONFIG, name2config, name, value):
-    return notify(CONFIG, name2config, name, value, CONFIG['udp_port_adc'])
+def notify_adc(CONFIG, value):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    address = (CONFIG['broker'], CONFIG['udp_port_adc'])
+    data = str(value)
+    s.sendto(data, address)
+    print('Sent datagram to {}: {}'.format(address, data))
+    # connectionless
 
 
 
@@ -267,6 +269,7 @@ def main():
             delta = abs(analog_value - old_analog_value)
             if delta >= CONFIG['adc_min_delta']:
                 print('Sensor state: {} -> {}'.format(old_analog_value, analog_value))
+                notify_adc(CONFIG, analog_value)
 
             i = 0
             old_analog_value = analog_value
