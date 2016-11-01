@@ -1,6 +1,7 @@
 import machine
 import time
 import socket
+import ure as re
 #import micropython
 
 #micropython.alloc_emergency_exception_buf(100)
@@ -105,17 +106,26 @@ def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
                         # TODO: could deinit(), but this works alright
                     else:
                         # on, but at what frequency / duty cycle?
-                        at = request_line.find('freq=')
-                        freq = None
-                        duty = None
-                        if at != -1:
-                            s = request_line[at + 5:]
-                            freq = int(s[:s.rfind('&')])
+                        match = re.search(r'freq=(\d+)&duty=(\d+)', request_line)
+                        if match:
+                            freq = int(match.group(1))
+                            duty = int(match.group(2))
+                        else:
+                            freq = 10
+                            duty = 512
 
-                        at = request_line.find('duty=')
-                        if at != -1:
-                            s = request_line[at + 5:]
-                            duty = int(s[:s.rfind(' ')])
+                        # TODO: why doesn't this regex-free code load on boot?
+                        #sline = str(request_line)
+                        #at = sline.find('freq=')
+                        #freq = None
+                        #duty = None
+                        #if at != -1:
+                        #    s = sline[at + 5:]
+                        #    freq = int(s[:s.rfind('&')])
+                        #at = sline.find('duty=')
+                        #if at != -1:
+                        #    s = sline[at + 5:]
+                        #    duty = int(s[:s.rfind(' ')])
                
                         if freq is None: freq = 10
                         if duty is None: duty = 512
