@@ -1,12 +1,9 @@
 import machine
 import time
 import socket
-import micropython
-import ure as re
+#import micropython
 
-micropython.alloc_emergency_exception_buf(100)
-
-#from umqtt.simple import MQTTClient
+#micropython.alloc_emergency_exception_buf(100)
 
 CONFIG = {
     "broker": "192.168.1.19", # overwritten by contents of file "/broker.ip"
@@ -18,24 +15,18 @@ CONFIG = {
         {
             "pin": 4,
             "name": "Switch #2",
-            "pull_up_down": machine.Pin.PULL_UP,
-            "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
             "on_bytes":  b'\x02\xff',
             "off_bytes": b'\x02\x00',
         },
         {
             "pin": 2,
             "name": "Switch #3",
-            "pull_up_down": machine.Pin.PULL_UP,
-            "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
             "on_bytes":  b'\x03\xff',
             "off_bytes": b'\x03\x00',
         },
         {
             "pin": 5,
             "name": "Switch #4",
-            "pull_up_down": machine.Pin.PULL_UP,
-            "trigger": machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
             "on_bytes":  b'\x04\xff',
             "off_bytes": b'\x04\x00',
         },
@@ -114,13 +105,20 @@ def serve_web_client(cl, addr, CONFIG, analog_value, name2value):
                         # TODO: could deinit(), but this works alright
                     else:
                         # on, but at what frequency / duty cycle?
-                        match = re.search(r'freq=(\d+)&duty=(\d+)', request_line)
-                        if match:
-                            freq = int(match.group(1))
-                            duty = int(match.group(2))
-                        else:
-                            freq = 10
-                            duty = 512
+                        at = request_line.find('freq=')
+                        freq = None
+                        duty = None
+                        if at != -1:
+                            s = request_line[at + 5:]
+                            freq = int(s[:s.rfind('&')])
+
+                        at = request_line.find('duty=')
+                        if at != -1:
+                            s = request_line[at + 5:]
+                            duty = int(s[:s.rfind(' ')])
+               
+                        if freq is None: freq = 10
+                        if duty is None: duty = 512
                         obj.freq(freq)
                         obj.duty(duty)
  
@@ -226,7 +224,7 @@ def main():
         pin_number = info['pin']
         name = info['name']
 
-        pin = machine.Pin(pin_number, machine.Pin.IN, info['pull_up_down'])
+        pin = machine.Pin(pin_number, machine.Pin.IN, machine.Pin.PULL_UP)
         name2pin[name] = pin
         name2old_value[name] = 1 # active-low; assume starts off inactive
         name2config[name] = info
@@ -238,7 +236,7 @@ def main():
                 # important: can't do much in an ISR, see https://micropython.org/resources/docs/en/latest/wipy/reference/isr_rules.html
                 #print('read {}: {}'.format(pin,pin.value()))
             print('Watching pin {} = {}'.format(pin_number, name))
-            pin.irq(trigger=trigger, handler=handler)
+            pin.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=handler)
 
         add_handler(pin_number, name, info['trigger'])
 
