@@ -10,7 +10,8 @@ micropython.alloc_emergency_exception_buf(100)
 
 CONFIG = {
     "broker": "192.168.1.19", # overwritten by contents of file "/broker.ip"
-    "udp_port": 8266, # of IP address above, for UDP datagrams on input GPIO transitions
+    "udp_port_gpio": 8266, # of IP address above, for UDP datagrams on input GPIO transitions
+    "udp_port_adc": 8267, # of IP address above, for UDP datagrams on ADC readings
     "client_id": b"esp8266_bedroom",
     "topic": b"home",
     "input_gpio": [
@@ -182,7 +183,7 @@ Content-Length: {}\r
     cl.send(response)
     cl.close()
 
-def notify(CONFIG, name2config, name, value):
+def notify(CONFIG, name2config, name, value, udp_port):
     info = name2config[name]
    
     if not value:
@@ -191,10 +192,17 @@ def notify(CONFIG, name2config, name, value):
         data = info['off_bytes']
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    address = (CONFIG['broker'], CONFIG['udp_port'])
+    address = (CONFIG['broker'], udp_port)
     s.sendto(data, address)
     print('Sent datagram to {}: {}'.format(address, data))
     # connectionless
+
+def notify_gpio(CONFIG, name2config, name, value):
+    return notify(CONFIG, name2config, name, value, CONFIG['udp_port_gpio'])
+
+def notify_adc(CONFIG, name2config, name, value):
+    return notify(CONFIG, name2config, name, value, CONFIG['udp_port_adc'])
+
 
 
 global any_gpio_changed
@@ -271,7 +279,7 @@ def main():
                 value = pin.value()
                 if old_value != value:
                     print('GPIO pin {}: {} -> {}'.format(name, old_value, value))
-                    notify(CONFIG, name2config, name, value)
+                    notify_gpio(CONFIG, name2config, name, value)
 
                 # Save old value for next time
                 name2old_value[name] = value
