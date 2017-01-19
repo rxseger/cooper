@@ -15,7 +15,24 @@ const int led = LED_BUILTIN;
 
 void handleRoot() {
   digitalWrite(led, 0);
-  server.send(200, "text/plain", "hello from esp8266!");
+  String html = "<html>"
+"<head>"
+"<title>ESP8266 Cooper</title>"
+"</head>"
+"<body>"
+"<h1>ESP8266</h1>"
+"<table>"
+" <tr>"
+"  <td>Analog Sensor</td>";
+  html += " <td>";
+  double analog_value = analogRead(0);
+  html += String(analog_value);
+  html += "</td>";
+
+  server.send(200, "text/html", html);
+  
+
+ 
   digitalWrite(led, 1);
 }
 
