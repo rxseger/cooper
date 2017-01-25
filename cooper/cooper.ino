@@ -40,8 +40,7 @@ void handleRoot() {
   html += String(analog_value);
   html += "</td>";
 
-  size_t count_gpio = sizeof(output_gpio) / sizeof(output_gpio[0]);
-  for (size_t i = 0; i < count_gpio; ++i) {
+  for (size_t i = 0; i < sizeof(output_gpio) / sizeof(output_gpio[0]); ++i) {
     html += "<tr>";
     html += " <td>" + String(output_gpio[i].name) + "</td>";
     html += " <td><a href=\"" + String(output_gpio[i].on_path) + "\">On</td>";
@@ -62,6 +61,37 @@ void handleRoot() {
 
 void handleNotFound(){
   digitalWrite(led, 0);
+
+  String uri = server.uri();
+  // Request to change GPIO?
+  for (size_t i = 0; i < sizeof(output_gpio) / sizeof(output_gpio[0]); ++i) {
+    bool new_value;
+    bool change_value = false;
+
+    if (uri.equals(output_gpio[i].on_path)) {
+      new_value = true;
+      change_value = true;
+    }
+
+    if (uri.equals(output_gpio[i].off_path)) {
+      new_value = false;
+      change_value = true;
+    }
+
+    if (change_value) {
+      Serial.println("Request via " + server.uri() + " to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
+
+      server.send(404, "text/plain", "Request to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
+
+      // TODO: pwm
+
+      int pin = output_gpio[i].pin;
+      digitalWrite(pin, new_value);
+      
+      return;
+    }
+  }
+  
   String message = "Not found: " + server.uri(); + "\n\n";
 
   server.send(404, "text/plain", message);
@@ -101,6 +131,12 @@ void setup(void){
 
   server.begin();
   Serial.println("HTTP server started");
+
+  // Setup pins
+  for (size_t i = 0; i < sizeof(output_gpio) / sizeof(output_gpio[0]); ++i) {
+    int pin = output_gpio[i].pin;
+    pinMode(pin, OUTPUT);
+  }
 }
 
 void loop(void){
