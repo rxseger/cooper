@@ -81,12 +81,12 @@ void handleNotFound(){
     if (change_value) {
       Serial.println("Request via " + server.uri() + " to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
 
-      server.send(404, "text/plain", "Request to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
-
       // TODO: pwm
 
       int pin = output_gpio[i].pin;
       digitalWrite(pin, new_value);
+
+      server.send(200, "text/plain", "Request to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
       
       return;
     }
