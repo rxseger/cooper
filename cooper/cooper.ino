@@ -13,11 +13,22 @@ ESP8266WebServer server(80);
 
 const int led = LED_BUILTIN;
 
+struct {
+  int pin;
+  char *name;
+  char *on_path;
+  char *off_path;
+} output_gpio[] = {
+  { 14, "AC Outlet", "/outlet/on", "/outlet/off" },
+  { 16, "Internal Green LED", "/led/on", "/led/off" },
+  { 15, "Buzzer", "/buzzer/on", "/buzzer/off" },
+};
+
 void handleRoot() {
   digitalWrite(led, 0);
   String html = "<html>"
 "<head>"
-"<title>ESP8266 Cooper</title>"
+"<title>ESP8266</title>"
 "</head>"
 "<body>"
 "<h1>ESP8266</h1>"
@@ -28,6 +39,19 @@ void handleRoot() {
   double analog_value = analogRead(0);
   html += String(analog_value);
   html += "</td>";
+
+  size_t count_gpio = sizeof(output_gpio) / sizeof(output_gpio[0]);
+  for (size_t i = 0; i < count_gpio; ++i) {
+    html += "<tr>";
+    html += " <td>" + String(output_gpio[i].name) + "</td>";
+    html += " <td><a href=\"" + String(output_gpio[i].on_path) + "\">On</td>";
+    html += " <td><a href=\"" + String(output_gpio[i].off_path) + "\">Off</td>";
+    html += "</tr>";    
+  }
+
+  html += "</table>"
+"</body>"
+"</html>";
 
   server.send(200, "text/html", html);
   
