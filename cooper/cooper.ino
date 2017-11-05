@@ -25,10 +25,11 @@ struct {
   char *name;
   char *on_path;
   char *off_path;
+  int pwm;
 } output_gpio[] = {
-  { 14, "AC Outlet", "/outlet/on", "/outlet/off" },    // D5
-  { 16, "Internal Green LED", "/led/on", "/led/off" }, // D0
-  { 15, "Buzzer", "/buzzer/on", "/buzzer/off" },       // D8?
+  { 14, "AC Outlet", "/outlet/on", "/outlet/off", 0 },    // D5
+  { 16, "Internal Green LED", "/led/on", "/led/off", 0 }, // D0
+  { 15, "Buzzer", "/buzzer/on", "/buzzer/off", 1 },       // D8?
 };
 
 struct {
@@ -111,11 +112,20 @@ void handleNotFound(){
     if (change_value) {
       Serial.println("Request via " + server.uri() + " to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
 
-      // TODO: pwm
-      // analogWrite
-
-      int pin = output_gpio[i].pin;
-      digitalWrite(pin, new_value);
+      if (output_gpio[i].pwm) {
+        // PWM
+        if (new_value) {
+          // TODO: parse these values from query string, /buzzer/on?freq=200&duty=512
+          // duty cycle, in steps up to 1023
+          analogWrite(output_gpio[i].pin, 512);
+          // frequency, 1 kHz default
+          analogWriteFreq(200);
+        } else {
+          analogWrite(output_gpio[i].pin, 0);
+        }
+      } else {
+        digitalWrite(output_gpio[i].pin, new_value);
+      }
 
       server.send(200, "text/plain", "Request to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
       
