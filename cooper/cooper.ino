@@ -24,6 +24,18 @@ struct {
   { 15, "Buzzer", "/buzzer/on", "/buzzer/off" },
 };
 
+struct {
+  int pin;
+  char *name;
+  char on_bytes[2];
+  char off_bytes[2];
+  int last_state;
+} input_gpio[] = {
+  { 4, "Switch #2", { 2, 0xff }, { 2, 0x00 }, 1 },
+  { 2, "Switch #3", { 3, 0xff }, { 3, 0x00 }, 1 },
+  { 5, "Switch #4", { 4, 0xff }, { 4, 0x00 }, 1 },
+};
+
 void handleRoot() {
   digitalWrite(led, 0);
   String html = "<html>"
@@ -82,6 +94,7 @@ void handleNotFound(){
       Serial.println("Request via " + server.uri() + " to change value of GPIO output: " + String(output_gpio[i].name) + " to " + String(new_value));
 
       // TODO: pwm
+      // analogWrite
 
       int pin = output_gpio[i].pin;
       digitalWrite(pin, new_value);
@@ -137,8 +150,27 @@ void setup(void){
     int pin = output_gpio[i].pin;
     pinMode(pin, OUTPUT);
   }
+
+  for (size_t i = 0; i < sizeof(input_gpio) / sizeof(input_gpio[0]); ++i) {
+    int pin = input_gpio[i].pin;
+    pinMode(pin, INPUT);
+  }
 }
 
 void loop(void){
   server.handleClient();
+
+  for (size_t i = 0; i < sizeof(input_gpio) / sizeof(input_gpio[0]); ++i) {
+    int pin = input_gpio[i].pin;
+    int new_state = digitalRead(pin);
+    int old_state = input_gpio[i].last_state;
+
+    if (new_state != old_state) { // TODO: edge triggering interrupts?
+      Serial.println("Switch " + String(i) + " changed from " + String(old_state) + " to " + String(new_state));
+      // TODO: send UDP packet
+    }
+    
+    input_gpio[i].last_state = new_state;
+  }
 }
+
