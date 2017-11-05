@@ -12,7 +12,8 @@ const char* broker = "192.168.1.1"; // receives UDP packets, running homebridge-
 #include "wifi-password.h"
 
 const uint16_t udp_port_gpio = 8266; // of broker IP address above, for UDP datagrams on input GPIO transitions
-const int adc_min_delta = 30; // only report changes if ADC differs by this amount from last poll value
+const int adc_min_delta = 5; // only report changes if ADC differs by this amount from last poll value
+const int adc_poll_interval = 1000; // milliseconds to check after
 const int udp_port_adc = 8267; // of broker IP address above, for UDP datagrams on ADC readings
 
 ESP8266WebServer server(80);
@@ -175,7 +176,8 @@ void setup(void){
 }
 
 static WiFiUDP udp;
-static int old_analog_value;
+static int old_analog_value = 0;
+static unsigned long analog_last_read_at = 0;
 
 void loop(void){
   server.handleClient();
@@ -203,18 +205,19 @@ void loop(void){
   }
 
   // Analog input
-  // TODO: read less often? if in a tight loop breaks networking
-  /*
-  int analog_value = analogRead(A0);
-  int delta = abs(analog_value - old_analog_value);
-  if (delta > adc_min_delta) {
-    Serial.printf("Analog input changed from %d to %d (delta %d)\n", old_analog_value, analog_value, delta); 
-    udp.beginPacket(broker, udp_port_adc);
-    String s = String(analog_value);
-    udp.write(s.c_str(), s.length());
-    udp.endPacket();
+  unsigned long duration = millis() - analog_last_read_at;
+  if (duration > adc_poll_interval) {
+    int analog_value = analogRead(A0);
+    int delta = abs(analog_value - old_analog_value);
+    if (delta > adc_min_delta) {
+      Serial.printf("Analog input changed from %d to %d (delta %d)\n", old_analog_value, analog_value, delta);
+      udp.beginPacket(broker, udp_port_adc);
+      String s = String(analog_value);
+      udp.write(s.c_str(), s.length());
+      udp.endPacket();
+    }
+    old_analog_value = analog_value;
+    analog_last_read_at = millis();
   }
-  old_analog_value = analog_value;
-  */
 }
 
