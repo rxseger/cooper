@@ -67,6 +67,16 @@ void handleRoot() {
     html += "</tr>";    
   }
 
+  for (size_t i = 0; i < sizeof(input_gpio) / sizeof(input_gpio[0]); ++i) {
+    html += "<tr>";
+    html += " <td>" + String(input_gpio[i].name) + "</td>";
+    //const char *value = digitalRead(input_gpio[i].pin) ? "Closed" : "Open";
+    const char *value = digitalRead(input_gpio[i].pin) ? "Off" : "On";
+    html += " <td colspan=\"2\" align=\"center\">" + String(value) + "</td>";
+    html += "</tr>";
+  }
+
+
   html += "</table>"
 "</body>"
 "</html>";
