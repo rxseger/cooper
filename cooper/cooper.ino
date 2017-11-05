@@ -151,13 +151,13 @@ void setup(void){
 
   // Setup pins
   for (size_t i = 0; i < sizeof(output_gpio) / sizeof(output_gpio[0]); ++i) {
-    int pin = output_gpio[i].pin;
-    pinMode(pin, OUTPUT);
+    Serial.printf("Configuring output: pin #%d = %s\n", output_gpio[i].pin, output_gpio[i].name);
+    pinMode(output_gpio[i].pin, OUTPUT);
   }
 
   for (size_t i = 0; i < sizeof(input_gpio) / sizeof(input_gpio[0]); ++i) {
-    int pin = input_gpio[i].pin;
-    pinMode(pin, INPUT);
+    pinMode(input_gpio[i].pin, INPUT);
+    Serial.printf("Configuring input: pin #%d = %s\n", input_gpio[i].pin, input_gpio[i].name);
   }
 }
 
@@ -172,7 +172,7 @@ void loop(void){
     int old_state = input_gpio[i].last_state;
 
     if (new_state != old_state) { // TODO: edge triggering interrupts?
-      Serial.println("Switch " + String(i) + " changed from " + String(old_state) + " to " + String(new_state));
+      Serial.printf("Input '%s' changed from %d to %d\n", input_gpio[i].name, old_state, new_state);
 
       // Send UDP packet to homebridge-udp-contactsensor
       udp.beginPacket(broker, udp_port_gpio);
