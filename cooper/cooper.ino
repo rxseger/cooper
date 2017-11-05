@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
@@ -6,8 +7,11 @@
 /*
 const char* ssid = "........";
 const char* password = "........";
+const char* broker = "192.168.1.1"; // receives UDP packets, running homebridge-udp-contactsensor
 */
 #include "wifi-password.h"
+
+const uint16_t udp_port_gpio = 8266; // of broker IP address above, for UDP datagrams on input GPIO transitions
 
 ESP8266WebServer server(80);
 
@@ -157,6 +161,8 @@ void setup(void){
   }
 }
 
+static WiFiUDP udp;
+
 void loop(void){
   server.handleClient();
 
@@ -167,7 +173,15 @@ void loop(void){
 
     if (new_state != old_state) { // TODO: edge triggering interrupts?
       Serial.println("Switch " + String(i) + " changed from " + String(old_state) + " to " + String(new_state));
-      // TODO: send UDP packet
+
+      // Send UDP packet to homebridge-udp-contactsensor
+      udp.beginPacket(broker, udp_port_gpio);
+      if (!new_state) { // active low
+        udp.write(input_gpio[i].on_bytes, sizeof input_gpio[i].on_bytes);
+      } else {
+        udp.write(input_gpio[i].off_bytes, sizeof input_gpio[i].off_bytes);
+      }
+      udp.endPacket();
     }
     
     input_gpio[i].last_state = new_state;
