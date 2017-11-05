@@ -104,7 +104,7 @@ void setup(void){
   digitalWrite(led, 1);
   Serial.begin(115200);
   WiFi.begin(ssid, password);
-  Serial.println("");
+  Serial.println("\nWaiting to connect to Wi-Fi...");
 
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
