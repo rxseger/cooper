@@ -157,7 +157,7 @@ void setup(void){
   }
 
   for (size_t i = 0; i < sizeof(input_gpio) / sizeof(input_gpio[0]); ++i) {
-    pinMode(input_gpio[i].pin, INPUT);
+    pinMode(input_gpio[i].pin, INPUT_PULLUP);
     Serial.printf("Configuring input: pin #%d = %s\n", input_gpio[i].pin, input_gpio[i].name);
   }
 }
