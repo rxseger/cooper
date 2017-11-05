@@ -12,6 +12,8 @@ const char* broker = "192.168.1.1"; // receives UDP packets, running homebridge-
 #include "wifi-password.h"
 
 const uint16_t udp_port_gpio = 8266; // of broker IP address above, for UDP datagrams on input GPIO transitions
+const int adc_min_delta = 30; // only report changes if ADC differs by this amount from last poll value
+const int udp_port_adc = 8267; // of broker IP address above, for UDP datagrams on ADC readings
 
 ESP8266WebServer server(80);
 
@@ -35,7 +37,7 @@ struct {
   char off_bytes[2];
   int last_state;
 } input_gpio[] = {
-     // Switch #1 - not available here, hardwired to ADC input through 3-input selector switch (digital switch, slider, light sensor)
+     // Switch #1 - not available here, hardwired to ADC input through 3-input selector switch (slider, digital switch, light sensor)
   { 4, "Switch #2", { 2, 0xff }, { 2, 0x00 }, 1 }, // D2, blue wire
   { 2, "Switch #3", { 3, 0xff }, { 3, 0x00 }, 1 }, // D4, green wire
   { 5, "Switch #4", { 4, 0xff }, { 4, 0x00 }, 1 }, // D1, red wire - black switch
@@ -163,10 +165,12 @@ void setup(void){
 }
 
 static WiFiUDP udp;
+static int old_analog_value;
 
 void loop(void){
   server.handleClient();
 
+  // Switch inputs
   for (size_t i = 0; i < sizeof(input_gpio) / sizeof(input_gpio[0]); ++i) {
     int pin = input_gpio[i].pin;
     int new_state = digitalRead(pin);
@@ -187,5 +191,20 @@ void loop(void){
     
     input_gpio[i].last_state = new_state;
   }
+
+  // Analog input
+  // TODO: read less often? if in a tight loop breaks networking
+  /*
+  int analog_value = analogRead(A0);
+  int delta = abs(analog_value - old_analog_value);
+  if (delta > adc_min_delta) {
+    Serial.printf("Analog input changed from %d to %d (delta %d)\n", old_analog_value, analog_value, delta); 
+    udp.beginPacket(broker, udp_port_adc);
+    String s = String(analog_value);
+    udp.write(s.c_str(), s.length());
+    udp.endPacket();
+  }
+  old_analog_value = analog_value;
+  */
 }
 
