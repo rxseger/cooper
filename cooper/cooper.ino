@@ -23,9 +23,9 @@ struct {
   char *on_path;
   char *off_path;
 } output_gpio[] = {
-  { 14, "AC Outlet", "/outlet/on", "/outlet/off" },
-  { 16, "Internal Green LED", "/led/on", "/led/off" },
-  { 15, "Buzzer", "/buzzer/on", "/buzzer/off" },
+  { 14, "AC Outlet", "/outlet/on", "/outlet/off" },    // D5
+  { 16, "Internal Green LED", "/led/on", "/led/off" }, // D0
+  { 15, "Buzzer", "/buzzer/on", "/buzzer/off" },       // D8?
 };
 
 struct {
@@ -35,9 +35,10 @@ struct {
   char off_bytes[2];
   int last_state;
 } input_gpio[] = {
-  { 4, "Switch #2", { 2, 0xff }, { 2, 0x00 }, 1 },
-  { 2, "Switch #3", { 3, 0xff }, { 3, 0x00 }, 1 },
-  { 5, "Switch #4", { 4, 0xff }, { 4, 0x00 }, 1 },
+     // Switch #1 - not available here, hardwired to ADC input through 3-input selector switch (digital switch, slider, light sensor)
+  { 4, "Switch #2", { 2, 0xff }, { 2, 0x00 }, 1 }, // D2, blue wire
+  { 2, "Switch #3", { 3, 0xff }, { 3, 0x00 }, 1 }, // D4, green wire
+  { 5, "Switch #4", { 4, 0xff }, { 4, 0x00 }, 1 }, // D1, red wire - black switch
 };
 
 void handleRoot() {
